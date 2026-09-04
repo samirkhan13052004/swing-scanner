@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import pandas_ta as ta
 from SmartApi import SmartConnect
-from loguru import logger
 import pyotp
 import time
 import datetime
+import requests
 
 # --- 1. द 7-कंडीशन स्कैनर ---
 def check_institutional_swing_setup(stock_df):
@@ -55,10 +55,23 @@ def fetch_data(obj, token, symbol):
     except:
         return None
 
-# --- 3. वेबसाइट UI ---
+# --- 3. स्मार्ट टोकन इंजन (दिन में सिर्फ 1 बार डाउनलोड होगा) ---
+@st.cache_data(ttl=86400)
+def get_angel_tokens():
+    url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+    res = requests.get(url)
+    data = res.json()
+    token_map = {}
+    for item in data:
+        if item['exch_seg'] == 'NSE' and '-EQ' in item['symbol']:
+            base_symbol = item['symbol'].split('-EQ')[0]
+            token_map[base_symbol] = item['token']
+    return token_map
+
+# --- 4. वेबसाइट UI ---
 st.set_page_config(page_title="Swing Scanner Pro", layout="wide")
-st.title("🚀 Nifty 50 Swing Scanner")
-st.markdown("यह स्कैनर निफ्टी 50 के सभी स्टॉक्स को 7-कंडीशन फॉर्मूले पर लाइव चेक करता है।")
+st.title("🚀 Nifty 200 Swing Scanner")
+st.markdown("यह स्कैनर निफ्टी 200 के स्टॉक्स को 7-कंडीशन फॉर्मूले पर स्कैन करता है।")
 
 st.sidebar.header("🔑 Login Details")
 api_key = st.sidebar.text_input("API Key", type="password")
@@ -77,48 +90,67 @@ if st.sidebar.button("Start Live Scan", use_container_width=True):
             if login_data['status'] == False:
                 st.error("लॉगिन फेल!")
                 st.stop()
-            st.success("लॉगिन सफल! स्कैनिंग शुरू हो रही है...")
+            st.success("लॉगिन सफल! डेटाबेस लोड हो रहा है...")
+            
+            # लेटेस्ट टोकन मैप लोड करें
+            token_map = get_angel_tokens()
+            
         except Exception as e:
             st.error(f"एरर: {e}")
             st.stop()
             
-        # निफ्टी 50 के सभी स्टॉक्स की डिक्शनरी (Symbol: Token)
-        stocks = {
-            "ADANIENT": "25", "ADANIPORTS": "15083", "APOLLOHOSP": "157", "ASIANPAINT": "236", 
-            "AXISBANK": "5900", "BAJAJ-AUTO": "16669", "BAJFINANCE": "317", "BAJAJFINSV": "16675", 
-            "BPCL": "526", "BHARTIARTL": "10604", "BRITANNIA": "547", "CIPLA": "694", 
-            "COALINDIA": "20374", "DIVISLAB": "10940", "DRREDDY": "881", "EICHERMOT": "910", 
-            "GRASIM": "1232", "HCLTECH": "7229", "HDFCBANK": "1333", "HDFCLIFE": "467", 
-            "HEROMOTOCO": "1348", "HINDALCO": "1363", "HINDUNILVR": "1394", "ICICIBANK": "4963", 
-            "INDUSINDBK": "5258", "INFY": "1594", "ITC": "1660", "JSWSTEEL": "11723", 
-            "KOTAKBANK": "1922", "LTIM": "17818", "LT": "11483", "M&M": "2031", 
-            "MARUTI": "10999", "NTPC": "11630", "NESTLEIND": "17963", "ONGC": "2475", 
-            "POWERGRID": "14977", "RELIANCE": "2885", "SBILIFE": "21808", "SBIN": "3045", 
-            "SHRIRAMFIN": "4306", "SUNPHARMA": "3351", "TCS": "11536", "TATACONSUM": "3432", 
-            "TATAMOTORS": "3456", "TATASTEEL": "3499", "TECHM": "13538", "TITAN": "3506", 
-            "ULTRACEMCO": "11532", "WIPRO": "3787"
-        }
+        # निफ्टी 200 स्टॉक्स की लिस्ट (Symbols)
+        nifty_200 = [
+            "ABB", "ACC", "ADANIENSOL", "ADANIENT", "ADANIGREEN", "ADANIPORTS", "ADANIPOWER", "ATGL", 
+            "AMBUJACEM", "APOLLOHOSP", "ASHOKLEY", "ASIANPAINT", "ASTRAL", "AUROPHARMA", "AXISBANK", 
+            "BAJAJ-AUTO", "BAJFINANCE", "BAJAJFINSV", "BAJAJHLDNG", "BALKRISIND", "BANDHANBNK", 
+            "BANKBARODA", "BANKINDIA", "MAHABANK", "BATAINDIA", "BEL", "BHARATFORG", "BHEL", "BPCL", 
+            "BHARTIARTL", "BOSCHLTD", "BRITANNIA", "CGPOWER", "CANBK", "CHOLAFIN", "CIPLA", "COALINDIA", 
+            "COFORGE", "COLPAL", "CONCOR", "CROMPTON", "CUMMINSIND", "DLF", "DABUR", "DIVISLAB", "DIXON", 
+            "DRREDDY", "EICHERMOT", "ESCORTS", "EXIDEIND", "FEDERALBNK", "FACT", "FORTIS", "GAIL", 
+            "GMRINFRA", "GLENMARK", "GODREJCP", "GODREJPROP", "GRASIM", "GUJGASLTD", "HCLTECH", 
+            "HDFCAMC", "HDFCBANK", "HDFCLIFE", "HAVELLS", "HEROMOTOCO", "HINDALCO", "HAL", "HINDCOPPER", 
+            "HINDPETRO", "HINDUNILVR", "ICICIBANK", "ICICIGI", "ICICIPRULI", "IDBI", "IDFCFIRSTB", "ITC", 
+            "INDIANB", "INDHOTEL", "IOC", "IRCTC", "IRFC", "INDIGOPNTS", "IGL", "INDUSINDBK", "NAUKRI", 
+            "INFY", "INDIGO", "JSWENERGY", "JSWSTEEL", "JINDALSTEL", "JIOFIN", "JUBLFOOD", "KALYANKJIL", 
+            "KOTAKBANK", "L&TFH", "LTTS", "LICHSGFIN", "LTIM", "LT", "LUPIN", "MRF", "M&M", "M&MFIN", 
+            "MARICO", "MARUTI", "MAXHEALTH", "MAZDOCK", "METROPOLIS", "MUTHOOTFIN", "NYKAA", "NMDC", 
+            "NTPC", "NATIONALUM", "NAVINFLUOR", "NESTLEIND", "OBEROIRLTY", "ONGC", "OIL", "PAYTM", 
+            "PIIND", "PIDILITIND", "PEL", "POLYCAB", "PFC", "POWERGRID", "PRESTIGE", "PNB", "RECLTD", 
+            "RELIANCE", "RVNL", "MOTHERSON", "SHREECEM", "SHRIRAMFIN", "SIEMENS", "SRF", "SBICARD", 
+            "SBILIFE", "SBIN", "SAIL", "SUNPHARMA", "SUNTV", "SUPREMEIND", "SUZLON", "TATACHEM", 
+            "TATACOMM", "TCS", "TATACONSUM", "TATAELXSI", "TATAMOTORS", "TATAPOWER", "TATASTEEL", 
+            "TECHM", "TITAN", "TORNTPHARM", "TRENT", "TVSMOTOR", "UBL", "ULTRACEMCO", "UNIONBANK", 
+            "UPL", "VBL", "VEDL", "VOLTAS", "WIPRO", "ZEE", "ZOMATO", "ZYDUSLIFE"
+        ]
         
         progress_bar = st.progress(0)
         status = st.empty()
         passed = []
         
-        for i, (symbol, token) in enumerate(stocks.items()):
-            status.text(f"Scanning ({i+1}/50): {symbol}...")
-            df = fetch_data(obj, token, symbol)
-            if df is not None:
-                is_ok, sl = check_institutional_swing_setup(df)
-                if is_ok:
-                    passed.append({"Stock": symbol, "Buy Price": f"₹{df['close'].iloc[-1]}", "Stop Loss": f"₹{sl}"})
+        total_stocks = len(nifty_200)
+        
+        for i, symbol in enumerate(nifty_200):
+            status.text(f"Scanning ({i+1}/{total_stocks}): {symbol}...")
             
-            # API को ब्लॉक होने से बचाने के लिए 0.4 सेकंड का ब्रेक
+            # टोकन इंजन से सही टोकन निकालें
+            token = token_map.get(symbol)
+            
+            if token:
+                df = fetch_data(obj, token, symbol)
+                if df is not None:
+                    is_ok, sl = check_institutional_swing_setup(df)
+                    if is_ok:
+                        passed.append({"Stock": symbol, "Buy Price": f"₹{df['close'].iloc[-1]}", "Stop Loss": f"₹{sl}"})
+            
+            # API को ब्लॉक होने से बचाने के लिए 0.4 सेकंड का ब्रेक (200 स्टॉक्स = 80 सेकंड लगेंगे)
             time.sleep(0.4)
-            progress_bar.progress((i + 1) / len(stocks))
+            progress_bar.progress((i + 1) / total_stocks)
             
         status.text("स्कैन पूरा हुआ!")
         
         if len(passed) > 0:
-            st.success("🎯 आज के लिए पास हुए स्टॉक्स:")
+            st.success(f"🎯 शानदार! आज {len(passed)} स्टॉक्स में ट्रेडिंग का मौका है:")
             st.dataframe(pd.DataFrame(passed), use_container_width=True)
         else:
-            st.warning("आज किसी भी स्टॉक ने कड़ा इंस्टीट्यूशनल सेटअप पास नहीं किया। शांति से बैठें!")
+            st.warning("आज किसी भी स्टॉक ने कड़ा इंस्टीट्यूशनल सेटअप पास नहीं किया। मार्केट शांत है।")
