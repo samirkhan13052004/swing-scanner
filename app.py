@@ -22,7 +22,7 @@ def check_institutional_swing_setup(stock_df):
         
         last = stock_df.iloc[-1]
         
-        # पिछले 7 दिनों का डेटा (Squeeze और Breakout के लिए)
+        # पिछले 7 दिनों का डेटा
         recent_7d_high = stock_df['high'].iloc[-8:-1].max()
         recent_7d_low = stock_df['low'].iloc[-8:-1].min()
         range_7d = recent_7d_high - recent_7d_low
@@ -31,17 +31,17 @@ def check_institutional_swing_setup(stock_df):
         score = 0
         matched = []
         
-        # शर्त 1: शॉर्ट-टर्म ट्रेंड (Price > 50 EMA)
+        # शर्त 1: शॉर्ट-टर्म ट्रेंड
         if last['close'] > last['EMA_50']:
             score += 1
             matched.append("Price > 50 EMA")
             
-        # शर्त 2: लॉन्ग-टर्म ट्रेंड (50 EMA > 200 EMA)
+        # शर्त 2: लॉन्ग-टर्म ट्रेंड
         if last['EMA_50'] > last['EMA_200']:
             score += 1
             matched.append("50 > 200 EMA")
             
-        # शर्त 3: मोमेंटम (RSI > 60)
+        # शर्त 3: मोमेंटम
         if last['RSI'] > 60:
             score += 1
             matched.append("RSI > 60")
@@ -61,7 +61,7 @@ def check_institutional_swing_setup(stock_df):
             score += 1
             matched.append("Breakout")
             
-        # शर्त 7: पॉजिटिव कैंडल (Green Candle)
+        # शर्त 7: पॉजिटिव कैंडल
         if last['close'] > last['open']:
             score += 1
             matched.append("Green Candle")
@@ -102,7 +102,6 @@ def get_angel_tokens():
 # --- 4. प्रीमियम वेबसाइट UI ---
 st.set_page_config(page_title="Pro Swing Scanner", layout="wide", page_icon="📈")
 
-# कस्टम CSS UI को बेहतरीन बनाने के लिए
 st.markdown("""
     <style>
     .big-font {font-size:30px !important; font-weight: bold; color: #1E88E5;}
@@ -178,7 +177,7 @@ if st.sidebar.button("Start Live Scan ⚡", use_container_width=True):
                     
                     all_results.append({
                         "Stock": symbol,
-                        "Raw_Score": score,  # हिडन कॉलम (सॉर्टिंग के लिए)
+                        "Raw_Score": score,
                         "Score": f"{score}/7",
                         "LTP (₹)": round(df['close'].iloc[-1], 2),
                         "Stop Loss (₹)": sl if score > 0 else "-",
@@ -191,37 +190,37 @@ if st.sidebar.button("Start Live Scan ⚡", use_container_width=True):
         status_text.empty()
         progress_bar.empty()
         
-        # डेटा को सॉर्ट करें (सबसे ज्यादा स्कोर वाले ऊपर)
-        res_df = pd.DataFrame(all_results)
-        res_df = res_df.sort_values(by="Raw_Score", ascending=False).reset_index(drop=True)
-        
-        # UI को सुंदर बनाने के लिए स्कोर कॉलम में इमोजी डालें
-        res_df.loc[res_df['Raw_Score'] == 7, 'Score'] = '🔥 7/7'
-        res_df.loc[res_df['Raw_Score'] == 6, 'Score'] = '⭐ 6/7'
-        res_df.loc[res_df['Raw_Score'] == 5, 'Score'] = '👍 5/7'
-        
-        # UI में 3 टैब्स बनाएं
-        tab1, tab2, tab3 = st.tabs(["🎯 Perfect Setups (7/7)", "⭐ Potential Watchlist (5 & 6)", "📊 Full Master Log"])
-        
-        with tab1:
-            st.subheader("🔥 100% Institutional Match")
-            perfect_df = res_df[res_df['Raw_Score'] == 7].drop(columns=['Raw_Score'])
-            if len(perfect_df) > 0:
-                st.dataframe(perfect_df, use_container_width=True, hide_index=True)
-            else:
-                st.info("आज किसी भी शेयर ने 7/7 स्कोर नहीं किया।")
-                
-        with tab2:
-            st.subheader("⭐ Upcoming Breakouts (स्कोर 5 और 6)")
-            st.markdown("इन शेयरों को वॉचलिस्ट में रखें। ये कल या परसों ब्रेकआउट दे सकते हैं।")
-            potential_df = res_df[(res_df['Raw_Score'] == 5) | (res_df['Raw_Score'] == 6)].drop(columns=['Raw_Score'])
-            if len(potential_df) > 0:
-                st.dataframe(potential_df, use_container_width=True, hide_index=True)
-            else:
-                st.info("कोई पोटेंशियल ट्रेड नहीं मिला।")
-                
-        with tab3:
-            st.subheader("📊 Nifty 200 Complete Log")
-            st.markdown("यहाँ देखें कि कौन सा शेयर किस वजह से फेल हुआ।")
-            full_df = res_df.drop(columns=['Raw_Score'])
-            st.dataframe(full_df, use_container_width=True, hide_index=True)
+        if len(all_results) > 0:
+            res_df = pd.DataFrame(all_results)
+            res_df = res_df.sort_values(by="Raw_Score", ascending=False).reset_index(drop=True)
+            
+            res_df.loc[res_df['Raw_Score'] == 7, 'Score'] = '🔥 7/7'
+            res_df.loc[res_df['Raw_Score'] == 6, 'Score'] = '⭐ 6/7'
+            res_df.loc[res_df['Raw_Score'] == 5, 'Score'] = '👍 5/7'
+            
+            tab1, tab2, tab3 = st.tabs(["🎯 Perfect Setups (7/7)", "⭐ Potential Watchlist (5 & 6)", "📊 Full Master Log"])
+            
+            with tab1:
+                st.subheader("🔥 100% Institutional Match")
+                perfect_df = res_df[res_df['Raw_Score'] == 7].drop(columns=['Raw_Score'])
+                if len(perfect_df) > 0:
+                    st.dataframe(perfect_df, use_container_width=True, hide_index=True)
+                else:
+                    st.info("आज किसी भी शेयर ने 7/7 स्कोर नहीं किया।")
+                    
+            with tab2:
+                st.subheader("⭐ Upcoming Breakouts (स्कोर 5 और 6)")
+                st.markdown("इन शेयरों को वॉचलिस्ट में रखें। ये कल या परसों ब्रेकआउट दे सकते हैं।")
+                potential_df = res_df[(res_df['Raw_Score'] == 5) | (res_df['Raw_Score'] == 6)].drop(columns=['Raw_Score'])
+                if len(potential_df) > 0:
+                    st.dataframe(potential_df, use_container_width=True, hide_index=True)
+                else:
+                    st.info("कोई पोटेंशियल ट्रेड नहीं मिला।")
+                    
+            with tab3:
+                st.subheader("📊 Nifty 200 Complete Log")
+                st.markdown("यहाँ देखें कि कौन सा शेयर किस वजह से फेल हुआ।")
+                full_df = res_df.drop(columns=['Raw_Score'])
+                st.dataframe(full_df, use_container_width=True, hide_index=True)
+        else:
+            st.error("⚠️ कोई डेटा नहीं मिला! यह एंजेल वन API लिमिट या मार्केट डेटा उपलब्ध न होने की वजह से हो सकता है।")
