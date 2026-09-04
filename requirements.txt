@@ -6,5 +6,4 @@ loguru
 pyotp
 logzero
 websocket-client
-
-
+requests
