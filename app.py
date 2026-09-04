@@ -184,7 +184,7 @@ if st.sidebar.button("Start Live Scan ⚡", use_container_width=True):
                         "Matched Conditions": ", ".join(matched_conditions) if score > 0 else "None"
                     })
             
-            time.sleep(0.4)
+            time.sleep(0.6)
             progress_bar.progress((i + 1) / total_stocks)
             
         status_text.empty()
