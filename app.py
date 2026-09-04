@@ -57,7 +57,8 @@ def fetch_data(obj, token, symbol):
 
 # --- 3. वेबसाइट UI ---
 st.set_page_config(page_title="Swing Scanner Pro", layout="wide")
-st.title("🚀 Institutional Swing Scanner")
+st.title("🚀 Nifty 50 Swing Scanner")
+st.markdown("यह स्कैनर निफ्टी 50 के सभी स्टॉक्स को 7-कंडीशन फॉर्मूले पर लाइव चेक करता है।")
 
 st.sidebar.header("🔑 Login Details")
 api_key = st.sidebar.text_input("API Key", type="password")
@@ -76,31 +77,48 @@ if st.sidebar.button("Start Live Scan", use_container_width=True):
             if login_data['status'] == False:
                 st.error("लॉगिन फेल!")
                 st.stop()
-            st.success("लॉगिन सफल!")
+            st.success("लॉगिन सफल! स्कैनिंग शुरू हो रही है...")
         except Exception as e:
             st.error(f"एरर: {e}")
             st.stop()
             
-        stocks = {"RELIANCE":"2885", "TCS":"11536", "INFY":"1594", "HDFCBANK":"1333", "TATASTEEL":"3499", "SBIN":"3045", "ICICIBANK":"4963", "ITC":"1660", "BHARTIARTL":"10604"}
+        # निफ्टी 50 के सभी स्टॉक्स की डिक्शनरी (Symbol: Token)
+        stocks = {
+            "ADANIENT": "25", "ADANIPORTS": "15083", "APOLLOHOSP": "157", "ASIANPAINT": "236", 
+            "AXISBANK": "5900", "BAJAJ-AUTO": "16669", "BAJFINANCE": "317", "BAJAJFINSV": "16675", 
+            "BPCL": "526", "BHARTIARTL": "10604", "BRITANNIA": "547", "CIPLA": "694", 
+            "COALINDIA": "20374", "DIVISLAB": "10940", "DRREDDY": "881", "EICHERMOT": "910", 
+            "GRASIM": "1232", "HCLTECH": "7229", "HDFCBANK": "1333", "HDFCLIFE": "467", 
+            "HEROMOTOCO": "1348", "HINDALCO": "1363", "HINDUNILVR": "1394", "ICICIBANK": "4963", 
+            "INDUSINDBK": "5258", "INFY": "1594", "ITC": "1660", "JSWSTEEL": "11723", 
+            "KOTAKBANK": "1922", "LTIM": "17818", "LT": "11483", "M&M": "2031", 
+            "MARUTI": "10999", "NTPC": "11630", "NESTLEIND": "17963", "ONGC": "2475", 
+            "POWERGRID": "14977", "RELIANCE": "2885", "SBILIFE": "21808", "SBIN": "3045", 
+            "SHRIRAMFIN": "4306", "SUNPHARMA": "3351", "TCS": "11536", "TATACONSUM": "3432", 
+            "TATAMOTORS": "3456", "TATASTEEL": "3499", "TECHM": "13538", "TITAN": "3506", 
+            "ULTRACEMCO": "11532", "WIPRO": "3787"
+        }
         
         progress_bar = st.progress(0)
         status = st.empty()
         passed = []
         
         for i, (symbol, token) in enumerate(stocks.items()):
-            status.text(f"Scanning: {symbol}...")
+            status.text(f"Scanning ({i+1}/50): {symbol}...")
             df = fetch_data(obj, token, symbol)
             if df is not None:
                 is_ok, sl = check_institutional_swing_setup(df)
                 if is_ok:
                     passed.append({"Stock": symbol, "Buy Price": f"₹{df['close'].iloc[-1]}", "Stop Loss": f"₹{sl}"})
+            
+            # API को ब्लॉक होने से बचाने के लिए 0.4 सेकंड का ब्रेक
             time.sleep(0.4)
             progress_bar.progress((i + 1) / len(stocks))
             
         status.text("स्कैन पूरा हुआ!")
         
         if len(passed) > 0:
-            st.success("🎯 आज के ट्रेड्स:")
+            st.success("🎯 आज के लिए पास हुए स्टॉक्स:")
             st.dataframe(pd.DataFrame(passed), use_container_width=True)
         else:
-            st.warning("आज कोई ट्रेड नहीं मिला।")
+            st.warning("आज किसी भी स्टॉक ने कड़ा इंस्टीट्यूशनल सेटअप पास नहीं किया। शांति से बैठें!")
